@@ -1,0 +1,37 @@
+name: Zari inbox
+
+on:
+  schedule:
+    - cron: "30 2-16/2 * * *"   # every 2 h, 08:00-22:00 IST (ntfy keeps replies ~12 h)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zari-data
+  cancel-in-progress: false
+
+jobs:
+  inbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NTFY_ALERT_TOPIC: ${{ secrets.NTFY_ALERT_TOPIC }}
+      NTFY_REPLY_TOPIC: ${{ secrets.NTFY_REPLY_TOPIC }}
+      TZ: Asia/Kolkata
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e .
+      - run: python -m zari inbox
+      - name: Save data
+        run: |
+          git config user.name "zari-bot"
+          git config user.email "zari-bot@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet || git commit -m "data: inbox $(date +'%Y-%m-%d %H:%M')"
+          git pull --rebase --autostash && git push

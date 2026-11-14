@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.venv/
+data/backfill.log
+.claude/settings.local.json
+.claude/
+# Personal / generated data stays local - run `python -m zari backfill` to build your own.
+data/*
+!data/.gitkeep

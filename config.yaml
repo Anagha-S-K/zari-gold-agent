@@ -1,0 +1,37 @@
+# Zari settings - SAMPLE values. Put your own plan details here.
+plan:
+  name: GRT Golden Eleven Flexi   # monthly jewellery purchase plan: grams = amount / 22K rate on payment day
+  monthly_amount: 10000           # INR, fixed each month
+  deadline_day: 10                # payment must reach the jeweller by this day of the month
+  enrol_date: 2026-01-05
+  instalments: 11
+
+checks:
+  min_rate: 1000                  # sane INR/g bounds for 22K (2015 was ~2,500)
+  max_rate: 50000
+  grt_mjdta_flag_diff: 10         # INR; bigger gap -> flag, trust GRT
+
+model:
+  drift_span: 60                  # EWMA span (trading days) for trend
+  vol_span: 20                    # EWMA span for current volatility
+  pool_days: 750                  # ~3 years of daily changes to resample from
+  paths: 4000                     # simulated futures per decision
+  margin: null                    # set by backtest tuning (fraction, e.g. 0.002)
+
+backfill:
+  start: 2015-01
+  pause_seconds: 1.5              # be polite to the source site
+
+ai:
+  enabled: true
+  github_model: openai/gpt-4.1-mini   # GitHub Models free tier (GITHUB_TOKEN in Actions)
+  gemini_model: gemini-2.5-flash      # fallback if GEMINI_API_KEY is set
+
+# Market-moving dates inside the payment window (US jobs report is added automatically).
+events:
+  - {date: 2026-12-09, name: "US Fed rate decision"}
+
+# One-off reminders on a given date.
+milestones:
+  - {date: 2026-11-01, text: "Redemption opens this month (month 10)."}
+  - {date: 2026-12-01, text: "Final instalment due this window - pay by the 10th."}

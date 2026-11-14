@@ -1,0 +1,59 @@
+name: Zari daily
+
+on:
+  schedule:
+    - cron: "30 2 * * *"      # 08:00 IST  signal: estimate today's rate
+    - cron: "45 4 * * *"      # 10:15 IST  morning: rates, pay alerts, recap, digest
+    - cron: "0 11 1-10 * *"   # 16:30 IST  afternoon (1st-10th): rate revised down?
+    - cron: "30 15 * * *"     # 21:00 IST  signal: estimate tomorrow's rate
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "Which run"
+        type: choice
+        options: [morning, afternoon, signal]
+        default: morning
+      dry_run:
+        description: "Dry run (print alerts, don't send)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write     # commit updated data/
+  models: read        # free GitHub Models for the AI analyst
+
+concurrency:
+  group: zari-data    # never two runs writing data/ at once
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NTFY_ALERT_TOPIC: ${{ secrets.NTFY_ALERT_TOPIC }}
+      NTFY_REPLY_TOPIC: ${{ secrets.NTFY_REPLY_TOPIC }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TZ: Asia/Kolkata
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e .
+      - name: Run Zari
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            python -m zari run --cron "${{ github.event.schedule }}"
+          else
+            python -m zari run --slot "${{ inputs.slot }}" ${{ inputs.dry_run && '--dry-run' || '' }}
+          fi
+      - name: Save data
+        run: |
+          git config user.name "zari-bot"
+          git config user.email "zari-bot@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet || git commit -m "data: $(date +'%Y-%m-%d %H:%M') run"
+          git pull --rebase --autostash && git push
